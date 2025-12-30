@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniArchitect Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism.min.css" rel="stylesheet" />
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-8 font-sans">
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Input Section -->
+        <div class="space-y-6">
+            <header>
+                <h1 class="text-4xl font-extrabold bg-gradient-to-r from-blue-400 to-emerald-400 text-transparent bg-clip-text">OmniArchitect</h1>
+                <p class="text-slate-400 mt-2">Graph-Guided Full-Stack Generator</p>
+            </header>
+
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+                <label class="block text-sm font-medium mb-2 text-slate-300">Describe your application</label>
+                <textarea id="prompt" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="E.g., A kanban board for tracking software bugs with users and statuses..."></textarea>
+                <button onclick="generateApp()" class="mt-4 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all transform hover:scale-[1.02]">
+                    Build Architecture & UI 🚀
+                </button>
+            </div>
+
+            <div id="graph-view" class="hidden bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <h3 class="text-lg font-semibold text-emerald-400 mb-4">🧠 Knowledge Graph (Entities)</h3>
+                <div id="graph-content" class="flex flex-wrap gap-2"></div>
+            </div>
+        </div>
+
+        <!-- Output Section -->
+        <div class="space-y-6">
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 h-[600px] flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-blue-400">Generated Code (React)</h3>
+                    <span class="text-xs text-slate-500">read-only</span>
+                </div>
+                <div class="flex-1 overflow-auto bg-slate-900 rounded-lg p-4 font-mono text-sm border border-slate-700">
+                    <pre><code id="code-output" class="language-jsx">/* Code will appear here... */</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-jsx.min.js"></script>
+    
+    <script>
+        async function generateApp() {
+            const prompt = document.getElementById('prompt').value;
+            const btn = document.querySelector('button');
+            const graphView = document.getElementById('graph-view');
+            const graphContent = document.getElementById('graph-content');
+            const codeOutput = document.getElementById('code-output');
+
+            if(!prompt) return alert("Please enter a description");
+
+            btn.disabled = true;
+            btn.innerHTML = "Architecting... ⚙️";
+            codeOutput.innerText = "// Connecting to OmniArchitect Core...";
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ description: prompt })
+                });
+                
+                const data = await res.json();
+                
+                // Render Graph Nodes
+                graphView.classList.remove('hidden');
+                graphContent.innerHTML = data.graph.entities.map(e => 
+                    `<span class="px-3 py-1 bg-emerald-900 text-emerald-300 rounded-full text-sm border border-emerald-700">${e}</span>`
+                ).join('');
+                
+                if (data.graph.relationships.length > 0) {
+                     graphContent.innerHTML += `<div class="w-full my-2 border-t border-slate-600"></div>`;
+                     graphContent.innerHTML += data.graph.relationships.map(r => 
+                        `<div class="text-xs text-slate-400 w-full flex items-center gap-2">
+                            <span class="text-emerald-300">${r.source}</span>
+                            <span class="text-slate-500">--[${r.type}]--></span>
+                            <span class="text-emerald-300">${r.target}</span>
+                        </div>`
+                    ).join('');
+                }
+
+                // Render Code
+                codeOutput.innerText = data.ui_code;
+                Prism.highlightElement(codeOutput);
+
+            } catch (err) {
+                alert("Error connecting to backend. Make sure python main.py is running.");
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = "Build Architecture & UI 🚀";
+            }
+        }
+    </script>
+</body>
+</html>
